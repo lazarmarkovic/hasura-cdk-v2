@@ -54,21 +54,23 @@ export class MainStack extends Stack {
     }
 
 
-    const vpc = new VPC(scope, `${appName}-HasuraVPC`, { env });
+    const vpc = new VPC(this, `${appName}-HasuraVPC`, { env });
 
-    const hasura = new Hasura(scope, `${appName}-Hasura`, {
+    const hasura = new Hasura(this, `${appName}-Hasura`, {
       env,
       vpc: vpc.vpc,
       appName,
       hostedZoneId,
+      hostedZoneName,
       hasuraHostname,
       multiAz,
     });
 
-    const actions = new Actions(scope, `${appName}-Actions`, {
+    const actions = new Actions(this, `${appName}-Actions`, {
       env,
       appName,
       hostedZoneId,
+      hostedZoneName,
       actionsHostname,
     });
   }

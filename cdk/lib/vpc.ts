@@ -1,17 +1,15 @@
-import { Stack, StackProps } from 'aws-cdk-lib';
-import { Construct } from 'constructs';
+import * as cdk from 'aws-cdk-lib';
 import { SubnetType, Vpc } from 'aws-cdk-lib/aws-ec2';
 
-export type VPCStackProps = StackProps;
+export type VPCStackProps = cdk.StackProps;
 
-export class VPC extends Stack {
+export class VPC {
 
   public readonly vpc: Vpc;
 
-  constructor(scope: Construct, id: string, props: VPCStackProps) {
-    super(scope, id, props);
+  constructor(mainStack: cdk.Stack, id: string, props: VPCStackProps) {
 
-    this.vpc = new Vpc(this, 'hasura-vpc', {
+    this.vpc = new Vpc(mainStack, 'hasura-vpc', {
       cidr: '10.0.0.0/16',
       enableDnsHostnames: true,
       enableDnsSupport: true,

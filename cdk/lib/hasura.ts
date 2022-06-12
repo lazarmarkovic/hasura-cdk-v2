@@ -1,5 +1,4 @@
-import { StackProps, Stack, CfnOutput, RemovalPolicy } from 'aws-cdk-lib';
-import { Construct } from 'constructs';
+import * as cdk from 'aws-cdk-lib';
 import { Vpc, InstanceType, InstanceClass, InstanceSize, Port, Protocol, SubnetType} from 'aws-cdk-lib/aws-ec2';
 import { ApplicationLoadBalancedFargateService } from 'aws-cdk-lib/aws-ecs-patterns';
 import { ContainerImage, Secret as ECSSecret } from 'aws-cdk-lib/aws-ecs';
@@ -9,28 +8,31 @@ import { Secret } from 'aws-cdk-lib/aws-secretsmanager';
 import { DnsValidatedCertificate } from 'aws-cdk-lib/aws-certificatemanager';
 
 
-export interface HasuraProps extends StackProps {
+export interface HasuraProps extends cdk.StackProps {
   appName: string;
   hostedZoneId: string;
+  hostedZoneName: string;
   hasuraHostname: string;
   vpc: Vpc;
   multiAz: boolean;
 }
 
-export class Hasura extends Stack {
-  constructor(scope: Construct, id: string, props: HasuraProps) {
-    super(scope, id, props);
+export class Hasura {
+  constructor(mainStack: cdk.Stack, id: string, props: HasuraProps) {
 
-    const hostedZone = PublicHostedZone.fromHostedZoneId(this, 'HasuraHostedZone', props.hostedZoneId);
+    const hostedZone = PublicHostedZone.fromPublicHostedZoneAttributes(mainStack, 'HasuraHostedZone', {
+      hostedZoneId: props.hostedZoneId,
+      zoneName: props.hostedZoneName
+    });
 
-    const hasuraCert = new DnsValidatedCertificate(this, 'HasuraCertificate', {
+    const hasuraCert = new DnsValidatedCertificate(mainStack, 'HasuraCertificate', {
       hostedZone,
       domainName: props.hasuraHostname,
     });
 
     const hasuraDatabaseName = props.appName;
 
-    const hasuraDatabase = new DatabaseInstance(this, 'HasuraDatabase', {
+    const hasuraDatabase = new DatabaseInstance(mainStack, 'HasuraDatabase', {
       instanceIdentifier: props.appName,
       databaseName: hasuraDatabaseName,
       engine: DatabaseInstanceEngine.POSTGRES,
@@ -44,13 +46,13 @@ export class Hasura extends Stack {
       },
       deletionProtection: false,
       multiAz: props.multiAz,
-      removalPolicy: RemovalPolicy.DESTROY,
+      removalPolicy: cdk.RemovalPolicy.DESTROY,
       credentials: Credentials.fromUsername("syscdk")
     });
 
     const hasuraUsername = 'hasura';
 
-    const hasuraUserSecret = new DatabaseSecret(this, 'HasuraDatabaseUser', {
+    const hasuraUserSecret = new DatabaseSecret(mainStack, 'HasuraDatabaseUser', {
       username: hasuraUsername,
       masterSecret: hasuraDatabase.secret,
 
@@ -58,43 +60,43 @@ export class Hasura extends Stack {
     hasuraUserSecret.attach(hasuraDatabase); // Adds DB connections information in the secret
 
     // Output the Endpoint Address so it can be used in post-deploy
-    new CfnOutput(this, 'HasuraDatabaseUserSecretArn', {
+    new cdk.CfnOutput(mainStack, 'HasuraDatabaseUserSecretArn', {
       value: hasuraUserSecret.secretArn,
     });
 
-    new CfnOutput(this, 'HasuraDatabaseMasterSecretArn', {
+    new cdk.CfnOutput(mainStack, 'HasuraDatabaseMasterSecretArn', {
       // eslint-disable-next-line @typescript-eslint/no-non-null-assertion
       value: hasuraDatabase.secret!.secretArn,
     });
 
-    const hasuraDatabaseUrlSecret = new Secret(this, 'HasuraDatabaseUrlSecret', {
+    const hasuraDatabaseUrlSecret = new Secret(mainStack, 'HasuraDatabaseUrlSecret', {
       secretName: `${props.appName}-HasuraDatabaseUrl`,
     });
 
 
-    new CfnOutput(this, 'HasuraDatabaseUrlSecretArn', {
+    new cdk.CfnOutput(mainStack, 'HasuraDatabaseUrlSecretArn', {
       value: hasuraDatabaseUrlSecret.secretArn,
     });
 
-    const hasuraAdminSecret = new Secret(this, 'HasuraAdminSecret', {
+    const hasuraAdminSecret = new Secret(mainStack, 'HasuraAdminSecret', {
       secretName: `${props.appName}-HasuraAdminSecret`,
     });
 
-    new CfnOutput(this, 'HasuraAdminSecretArn', {
+    new cdk.CfnOutput(mainStack, 'HasuraAdminSecretArn', {
       value: hasuraAdminSecret.secretArn,
     });
 
-    const hasuraJwtSecret = new Secret(this, 'HasuraJwtSecret', {
+    const hasuraJwtSecret = new Secret(mainStack, 'HasuraJwtSecret', {
       secretName: `${props.appName}-HasuraJWTSecret`,
     });
 
-    new CfnOutput(this, 'HasuraJwtSecretArn', {
+    new cdk.CfnOutput(mainStack, 'HasuraJwtSecretArn', {
       value: hasuraJwtSecret.secretArn,
     });
 
 
     // Create a load-balanced Fargate service and make it public
-    const fargate = new ApplicationLoadBalancedFargateService(this, 'HasuraFargateService', {
+    const fargate = new ApplicationLoadBalancedFargateService(mainStack, 'HasuraFargateService', {
       serviceName: props.appName,
       vpc: props.vpc,
       cpu: 256,
