@@ -1,4 +1,5 @@
 # Deploying Hasura using CDK
+This repo is updated version of [lineupninja/hasura-cdk](https://github.com/lineupninja/hasura-cdk/tree/master/cdk) repo. AWS CDK v1 -> AWS CDK v2.
 
 This repository contains an example of how to deploy Hasura into AWS using [AWS CDK](https://aws.amazon.com/cdk/).
 
